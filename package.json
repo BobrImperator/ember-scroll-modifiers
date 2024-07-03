@@ -35,7 +35,7 @@
     "ember-cli-babel": "^7.26.11",
     "ember-cli-htmlbars": "^6.3.0",
     "ember-modifier": "^4.1.0",
-    "intersection-observer-admin": "^0.3.3"
+    "intersection-observer-admin": "../intersection-observer-admin"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.22.15",
@@ -53,6 +53,7 @@
     "ember-cli-deprecation-workflow": "^2.0.0",
     "ember-cli-fastboot": "^4.1.1",
     "ember-cli-inject-live-reload": "^2.1.0",
+    "ember-cli-memory-leak-detector": "^0.7.1",
     "ember-cli-sass": "^11.0.0",
     "ember-cli-sri": "^2.1.1",
     "ember-cli-terser": "^4.0.2",

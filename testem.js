@@ -15,9 +15,16 @@ module.exports = {
         '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--mute-audio',
-        '--remote-debugging-port=0',
+        process.env.DETECT_MEMORY_LEAKS
+          ? '--remote-debugging-port=9222'
+          : '--remote-debugging-port=9222',
         '--window-size=1440,900',
       ].filter(Boolean),
+      dev: [
+        process.env.DETECT_MEMORY_LEAKS
+          ? '--remote-debugging-port=9222'
+          : '--remote-debugging-port=9222',
+      ]
     },
   },
 };
