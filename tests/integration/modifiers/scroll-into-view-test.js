@@ -1,20 +1,19 @@
+import { clearRender, render } from '@ember/test-helpers';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import { render, clearRender } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setupRenderingTest } from 'ember-qunit';
 import sinon from 'sinon';
 
 module('Integration | Modifier | scroll-into-view', function (hooks) {
   setupRenderingTest(hooks);
-  const sandbox = sinon.createSandbox();
 
   hooks.beforeEach(function () {
-    this.scrollIntoViewSpy = sandbox.spy(Element.prototype, 'scrollIntoView');
+    window.matchMedia = sinon.stub().returns({ matches: false });
+    this.scrollIntoViewSpy = sinon.spy(Element.prototype, 'scrollIntoView');
   });
 
   hooks.afterEach(function () {
     this.scrollIntoViewSpy = null;
-    sandbox.restore();
   });
 
   test('it renders and passes options when shouldScroll is true', async function (assert) {
@@ -300,6 +299,196 @@ module('Integration | Modifier | scroll-into-view', function (hooks) {
           top: 50,
         },
         'scrollTo was called with correct params',
+      );
+    });
+  });
+
+  module('with focus', function () {
+    test('it scrolls and focuses on first focusable element', async function (assert) {
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true shouldFocusAfterScroll=true}}>
+          <button data-test-focus-selector />
+        </div>`,
+      );
+
+      assert.true(this.scrollIntoViewSpy.called, 'scrollIntoView was called');
+      assert
+        .dom('[data-test-focus-selector]')
+        .isFocused('First focusable element has focus');
+    });
+
+    test('it does not focus when shouldFocusAfterScroll is false', async function (assert) {
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true shouldFocusAfterScroll=false}}>
+          <button data-test-focus-selector />
+        </div>`,
+      );
+
+      assert
+        .dom('[data-test-focus-selector]')
+        .isNotFocused('Focusable element does not have focus');
+    });
+
+    test('it does not focus when focusable element is not found', async function (assert) {
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true shouldFocusAfterScroll=true}}>
+          <div data-test-non-focus-selector />
+        </div>`,
+      );
+
+      assert
+        .dom('[data-test-non-focus-selector]')
+        .isNotFocused('Non-focusable element does not have focus');
+    });
+
+    test('it focuses on given focusable element', async function (assert) {
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true shouldFocusAfterScroll=true focusSelector='[data-test-focus-selector]'}}>
+          <button />
+          <button data-test-focus-selector />
+        </div>`,
+      );
+
+      assert
+        .dom('[data-test-focus-selector]')
+        .isFocused('Given focusable element has focus');
+    });
+
+    test('it focuses on first focusable element when given focusable element is not found', async function (assert) {
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true shouldFocusAfterScroll=true focusSelector='[data-test-bad-selector]'}}>
+          <button data-test-focus-selector />
+          <button />
+        </div>`,
+      );
+
+      assert
+        .dom('[data-test-focus-selector]')
+        .isFocused('First focusable element has focus');
+    });
+  });
+
+  module('prefers-reduced-motion', function (motionHooks) {
+    motionHooks.beforeEach(function () {
+      this.scrollToSpyMotion = sinon.spy(window, 'scrollTo');
+
+      this.smoothOptions = { behavior: 'smooth' };
+      this.instantOptions = { behavior: 'instant' };
+    });
+
+    test('it handles prefers-reduced-motion setting enabled', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: true });
+
+      await render(
+        hbs`<div {{scroll-into-view options=this.smoothOptions shouldScroll=true}}></div>`,
+      );
+
+      assert.ok(this.scrollIntoViewSpy.called, 'scrollIntoView was called');
+
+      assert.deepEqual(
+        this.scrollIntoViewSpy.args[0][0],
+        this.instantOptions,
+        'scrollIntoView was called with correct params',
+      );
+    });
+
+    test('it handles prefers-reduced-motion setting disabled and request behavior smooth', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: false });
+
+      await render(
+        hbs`<div {{scroll-into-view options=this.smoothOptions shouldScroll=true}}></div>`,
+      );
+
+      assert.ok(this.scrollIntoViewSpy.called, 'scrollIntoView was called');
+
+      assert.deepEqual(
+        this.scrollIntoViewSpy.args[0][0],
+        this.smoothOptions,
+        'scrollIntoView was called with correct params',
+      );
+    });
+
+    test('it handles prefers-reduced-motion setting disabled and request behavior instant', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: false });
+
+      await render(
+        hbs`<div {{scroll-into-view options=this.instantOptions shouldScroll=true}}></div>`,
+      );
+
+      assert.ok(this.scrollIntoViewSpy.called, 'scrollIntoView was called');
+
+      assert.deepEqual(
+        this.scrollIntoViewSpy.args[0][0],
+        this.instantOptions,
+        'scrollIntoView was called with correct params',
+      );
+    });
+
+    test('it does not set behavior when not passed as option', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: true });
+      this.options = { test: 'test' };
+
+      await render(
+        hbs`<div {{scroll-into-view options=this.options shouldScroll=true}}></div>`,
+      );
+
+      assert.ok(this.scrollIntoViewSpy.called, 'scrollIntoView was called');
+
+      assert.deepEqual(
+        this.scrollIntoViewSpy.args[0][0],
+        this.options,
+        'scrollIntoView was called with correct params',
+      );
+    });
+
+    test('it does not override default behavior when not passed as option with offset', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: true });
+      this.options = { test: 'test', topOffset: 50 };
+
+      await render(
+        hbs`<div {{scroll-into-view options=this.options shouldScroll=true}}></div>`,
+      );
+
+      assert.strictEqual(
+        this.scrollToSpyMotion.args[0][0].behavior,
+        'auto',
+        'scrollTo was called with correct behavior',
+      );
+    });
+
+    test('it handles prefers-reduced-motion setting enabled with offset present', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: true });
+      this.options = {
+        ...this.smoothOptions,
+        topOffset: 50,
+      };
+
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true options=this.options}}></div>`,
+      );
+
+      assert.strictEqual(
+        this.scrollToSpyMotion.args[0][0].behavior,
+        this.instantOptions.behavior,
+        'scrollTo was called with correct behavior',
+      );
+    });
+
+    test('it handles prefers-reduced-motion setting disabled with offset present', async function (assert) {
+      window.matchMedia = sinon.stub().returns({ matches: false });
+      this.options = {
+        ...this.smoothOptions,
+        topOffset: 50,
+      };
+
+      await render(
+        hbs`<div {{scroll-into-view shouldScroll=true options=this.options}}></div>`,
+      );
+
+      assert.strictEqual(
+        this.scrollToSpyMotion.args[0][0].behavior,
+        this.smoothOptions.behavior,
+        'scrollTo was called with correct behavior',
       );
     });
   });
